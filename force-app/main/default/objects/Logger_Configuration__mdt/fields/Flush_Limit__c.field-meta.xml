@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Flush_Limit__c</fullName>
+    <defaultValue>0</defaultValue>
+    <description>Indicates the max amount of logs to be held within the Apex Logger before being published and flushed (I.e. cleared). A blank value or a value less than 1 results in immediate publishing of each log.</description>
+    <externalId>false</externalId>
+    <fieldManageability>SubscriberControlled</fieldManageability>
+    <inlineHelpText>Indicates the max amount of logs to be held within the Apex Logger before being published and flushed (I.e. cleared). A blank value or a value less than 1 results in immediate publishing of each log.</inlineHelpText>
+    <label>Flush Limit</label>
+    <precision>5</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>
