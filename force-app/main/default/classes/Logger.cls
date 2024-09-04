@@ -1,59 +1,62 @@
 public without sharing class Logger implements ILogger {
-    private final String LOGGER_CONFIGURATION_NAME = 'Logger Configuration';
     private final Integer MAX_MESSAGE_LENGTH = 255;
 
-    private final List<Log_Event__e> logsToPublish;
+    private final List<Log_Event__e> queuedLogs;
     private final Integer flushLimit;
-    private final Severity highestSeverity;
+    private final Severity minimumSeverity;
     private final Boolean enableSystemDebug;
+    private final Boolean pauseLogging;
 
     public Logger() {
-        this.logsToPublish = new List<Log_Event__e>();
+        this.queuedLogs = new List<Log_Event__e>();
         this.flushLimit = 1;
-        this.highestSeverity = Severity.ERROR;
+        this.minimumSeverity = Severity.ERROR;
         this.enableSystemDebug = false;
+        this.pauseLogging = false;
     }
     
     public Logger(Logger_Configuration__mdt config) {
         if (config == null) {
             return;
         }
-        this.logsToPublish = new List<Log_Event__e>();
+        
+        this.queuedLogs = new List<Log_Event__e>();
         this.flushLimit = config.Flush_Limit__c != null ? Integer.valueOf(config.Flush_Limit__c) : 1;
-        this.highestSeverity = this.getSeverityFromText(config.Highest_Severity__c);
+        this.minimumSeverity = this.getSeverityFromText(config.Minimum_Severity__c);
         this.enableSystemDebug = config.Enable_System_Debug__c;
+        this.pauseLogging = config.Pause_Logging__c;
     }
 
     public void error(String message) {
-        publishLog(Severity.ERROR, message, null);
+        addToLogQueue(Severity.ERROR, message, null);
     }
 
     public void error(String message, Object obj) {
-        publishLog(Severity.ERROR, message, obj);
+        addToLogQueue(Severity.ERROR, message, obj);
     }
 
     public void warn(String message) {
-        publishLog(Severity.WARN, message, null);
+        addToLogQueue(Severity.WARN, message, null);
     }
 
     public void warn(String message, Object obj) {
-        publishLog(Severity.WARN, message, obj);
+        addToLogQueue(Severity.WARN, message, obj);
     }
 
     public void info(String message) {
-        publishLog(Severity.INFO, message, null);
+        addToLogQueue(Severity.INFO, message, null);
     }
 
     public void info(String message, Object obj) {
-        publishLog(Severity.INFO, message, obj);
+        addToLogQueue(Severity.INFO, message, obj);
     }
 
     public void debug(String message) {
-        publishLog(Severity.DEBUG, message, null);
+        addToLogQueue(Severity.DEBUG, message, null);
     }
 
     public void debug(String message, Object obj) {
-        publishLog(Severity.DEBUG, message, obj);
+        addToLogQueue(Severity.DEBUG, message, obj);
     }
 
     @TestVisible
@@ -77,31 +80,53 @@ public without sharing class Logger implements ILogger {
                 configuredSeverity = Severity.DEBUG;
             }
             when else {
-                configuredSeverity = highestSeverity;
+                configuredSeverity = this.minimumSeverity;
             }
         }
         return configuredSeverity;
     }
 
     @TestVisible
-    private void publishLog(Severity logSeverity, String message, Object obj) {
-        if (skipPublishingLog(logSeverity, message)) {
+    private void addToLogQueue(Severity logSeverity, String message, Object obj) {
+        if (this.skipPublishingLog(logSeverity, message)) {
             return;
         }
+
+        Log_Event__e log = new Log_Event__e(
+            Message__c = message.length() > this.MAX_MESSAGE_LENGTH ? message.substring(0, this.MAX_MESSAGE_LENGTH - 1) : message,
+            Severity__c = logSeverity.name(),
+            Executing_User_Id__c = UserInfo.getUserId()
+        );
+        this.setRequestContextValues(log);
+        this.setObjectValues(log, obj);
+        this.publishAndFlush(log);
     }
 
+    @TestVisible
     private Boolean skipPublishingLog(Severity logSeverity, String message) {
-        if (logSeverity.ordinal() > highestSeverity.ordinal() || String.isBlank(message) || message.length() > MAX_MESSAGE_LENGTH) {
-            return true;
+        Boolean skipPublishing = false;
+        if (logSeverity.ordinal() < this.minimumSeverity.ordinal() || this.pauseLogging || String.isBlank(message)) {
+            skipPublishing = true;
         }
-        else {
-            return false;
-        }
+        return skipPublishing;
     }
 
-    private void flush() {
-        if (flushLimit < 1 || (logsToPublish != null && logsToPublish.size() > flushLimit)) {
-            logsToPublish.clear();
+    @TestVisible
+    private void setRequestContextValues(Log_Event__e log) {
+
+    }
+
+    @TestVisible
+    private void setObjectValues(Log_Event__e log, Object obj) {
+        
+    }
+
+    @TestVisible
+    private void publishAndFlush(Log_Event__e log) {
+        this.queuedLogs.add(log);
+        if (this.flushLimit <= 1 || this.queuedLogs.size() >= this.flushLimit) {
+            EventBus.publish(this.queuedLogs);
+            this.queuedLogs.clear();
         }
     }
 
