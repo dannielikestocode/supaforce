@@ -1,6 +1,10 @@
 public without sharing class Logger implements ILogger {
-    private final Integer MAX_MESSAGE_LENGTH = 255;
+    private static final Integer MAX_MESSAGE_LENGTH = 255;
 
+    private final String TRANSACTION_ID;
+    private final Quiddity TRANSACTION_TYPE;
+    private final String TRANSACTION_TYPE_SHORT_CODE;
+    
     private final List<Log_Event__e> queuedLogs;
     private final Integer flushLimit;
     private final Severity minimumSeverity;
@@ -8,6 +12,11 @@ public without sharing class Logger implements ILogger {
     private final Boolean pauseLogging;
 
     public Logger() {
+        Request currentRequest = Request.getCurrent();
+        this.TRANSACTION_ID = currentRequest.getRequestId();
+        this.TRANSACTION_TYPE = currentRequest.getQuiddity();
+        this.TRANSACTION_TYPE_SHORT_CODE = System.getQuiddityShortCode(this.TRANSACTION_TYPE);
+
         this.queuedLogs = new List<Log_Event__e>();
         this.flushLimit = 1;
         this.minimumSeverity = Severity.ERROR;
@@ -16,11 +25,20 @@ public without sharing class Logger implements ILogger {
     }
     
     public Logger(Logger_Configuration__mdt config) {
-        if (config == null) {
+        Request currentRequest = Request.getCurrent();
+        this.TRANSACTION_ID = currentRequest.getRequestId();
+        this.TRANSACTION_TYPE = currentRequest.getQuiddity();
+        this.TRANSACTION_TYPE_SHORT_CODE = System.getQuiddityShortCode(this.TRANSACTION_TYPE);
+        this.queuedLogs = new List<Log_Event__e>();
+
+        if (config == null) {    
+            this.flushLimit = 1;
+            this.minimumSeverity = Severity.ERROR;
+            this.enableSystemDebug = false;
+            this.pauseLogging = false;
             return;
         }
         
-        this.queuedLogs = new List<Log_Event__e>();
         this.flushLimit = config.Flush_Limit__c != null ? Integer.valueOf(config.Flush_Limit__c) : 1;
         this.minimumSeverity = this.getSeverityFromText(config.Minimum_Severity__c);
         this.enableSystemDebug = config.Enable_System_Debug__c;
@@ -93,11 +111,11 @@ public without sharing class Logger implements ILogger {
         }
 
         Log_Event__e log = new Log_Event__e(
-            Message__c = message.length() > this.MAX_MESSAGE_LENGTH ? message.substring(0, this.MAX_MESSAGE_LENGTH - 1) : message,
             Severity__c = logSeverity.name(),
-            Executing_User_Id__c = UserInfo.getUserId()
+            Executing_User_Id__c = UserInfo.getUserId(),
+            Message__c = message.length() > MAX_MESSAGE_LENGTH ? message.substring(0, MAX_MESSAGE_LENGTH - 1) : message
         );
-        this.setRequestContextValues(log);
+        this.setExecutionContextValues(log);
         this.setObjectValues(log, obj);
         this.publishAndFlush(log);
     }
@@ -112,13 +130,33 @@ public without sharing class Logger implements ILogger {
     }
 
     @TestVisible
-    private void setRequestContextValues(Log_Event__e log) {
-
+    private void setExecutionContextValues(Log_Event__e log) {
+        log.Transaction_Id__c = this.TRANSACTION_ID;
+        log.Transaction_Type__c = this.TRANSACTION_TYPE.name();
+        log.Transaction_Type_Short_Code__c = this.TRANSACTION_TYPE_SHORT_CODE;
     }
 
     @TestVisible
     private void setObjectValues(Log_Event__e log, Object obj) {
-        
+        if (obj == null) {
+            return;
+        }
+
+        if (obj instanceof Exception) {
+            Exception e = (Exception)obj;
+            log.Exception_Name__c = e.getTypeName();
+            log.Line_Number__c = e.getLineNumber();
+            log.Exception_Message__c = e.getMessage();
+            log.Stack_Trace__c = e.getStackTraceString();
+        }
+        else {
+            try {
+                log.Object_Data__c = JSON.serialize(obj);
+            }
+            catch(Exception e) {
+                log.Object_Data__c = 'JSON serialization failed for object data. Exception message: ' + e.getMessage(); 
+            }
+        }
     }
 
     @TestVisible
