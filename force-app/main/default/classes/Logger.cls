@@ -1,5 +1,7 @@
 public without sharing class Logger implements ILogger {
     private static final Integer MAX_MESSAGE_LENGTH = 255;
+    private static final Integer MAX_OBJECT_VALUE_LENGTH = 131072;
+    private static final Integer MAX_MESSAGE_PREFIX_LENGTH = 25;
 
     private final String TRANSACTION_ID;
     private final Quiddity TRANSACTION_TYPE;
@@ -10,6 +12,13 @@ public without sharing class Logger implements ILogger {
     private final Severity minimumSeverity;
     private final Boolean enableSystemDebug;
     private final Boolean pauseLogging;
+
+    public String messagePrefix {get;set {
+        if (String.isNotBlank(value) && value.length() > MAX_MESSAGE_PREFIX_LENGTH) {
+            throw new IllegalArgumentException('Message prefix must be ' + MAX_MESSAGE_PREFIX_LENGTH + ' characters or less');
+        }
+        messagePrefix = value;
+    }}
 
     public Logger() {
         Request currentRequest = Request.getCurrent();
@@ -43,6 +52,7 @@ public without sharing class Logger implements ILogger {
         this.minimumSeverity = this.getSeverityFromText(config.Minimum_Severity__c);
         this.enableSystemDebug = config.Enable_System_Debug__c;
         this.pauseLogging = config.Pause_Logging__c;
+        this.messagePrefix = config.Default_Message_Prefix__c;
     }
 
     public void error(String message) {
@@ -151,7 +161,8 @@ public without sharing class Logger implements ILogger {
         }
         else {
             try {
-                log.Object_Data__c = JSON.serialize(obj);
+                String objectData = JSON.serialize(obj);
+                log.Object_Data__c = objectData.length() > MAX_OBJECT_VALUE_LENGTH ? objectData.substring(0, MAX_OBJECT_VALUE_LENGTH - 1) : objectData;
             }
             catch(Exception e) {
                 log.Object_Data__c = 'JSON serialization failed for object data. Exception message: ' + e.getMessage(); 
