@@ -1,7 +1,8 @@
 public without sharing class CalloutBuilder {
+    private static final String DEFAULT_EXCEPTION_MESSAGE = 'Callout failed';
     private HttpRequest request {get;set;}
-    private String httpExceptionStatus {get;set;}
-    private Integer httpExceptionStatusCode {get;set;}
+    private String successHttpStatus {get;set;}
+    private Integer successHttpStatusCode {get;set;}
 
     public CalloutBuilder() {
         this.request = new HttpRequest();
@@ -120,19 +121,23 @@ public without sharing class CalloutBuilder {
         return this;
     }
 
-    public CalloutBuilder throwExceptionForHttpStatus(String httpExceptionStatus) {
-        this.httpExceptionStatus = httpExceptionStatus;
+    public CalloutBuilder setSuccessHttpStatus(String successHttpStatus) {
+        this.successHttpStatus = successHttpStatus;
         return this;
     }
 
-    public CalloutBuilder throwExceptionForHttpStatusCode(Integer httpExceptionStatusCode) {
-        this.httpExceptionStatusCode = httpExceptionStatusCode;
+    public CalloutBuilder setSuccessHttpStatusCode(Integer successHttpStatusCode) {
+        this.successHttpStatusCode = successHttpStatusCode;
         return this;
     }
 
     public HttpResponse send() {
         Http httpSender = new Http();
-        HttpResponse response = httpSender.send(this.request); 
+        HttpResponse response = httpSender.send(this.request);
+        if ((this.successHttpStatus != null && this.successHttpStatus != response.getStatus()) || 
+            (this.successHttpStatusCode != null && this.successHttpStatusCode != response.getStatusCode())) {
+                throw new ExtendedCalloutException(DEFAULT_EXCEPTION_MESSAGE, response.getStatus(), response.getStatusCode());
+        }
         return response;
     }
 
