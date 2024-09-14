@@ -136,7 +136,7 @@ public without sharing class CalloutBuilder {
         HttpResponse response = httpSender.send(this.request);
         if ((this.successHttpStatus != null && this.successHttpStatus != response.getStatus()) || 
             (this.successHttpStatusCode != null && this.successHttpStatusCode != response.getStatusCode())) {
-                throw new ExtendedCalloutException(DEFAULT_EXCEPTION_MESSAGE, response.getStatus(), response.getStatusCode());
+                throw new HttpException(DEFAULT_EXCEPTION_MESSAGE, response.getStatus(), response.getStatusCode());
         }
         return response;
     }
