@@ -5,7 +5,7 @@ public with sharing class TriggerActionDispatcher {
 
     }
     
-    private void test() {
+    private String getActionFromTriggerContext() {
 
     }
  }
