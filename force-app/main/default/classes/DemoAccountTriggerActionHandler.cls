@@ -1,4 +1,4 @@
-public with sharing class DemoAccountTriggerActionHandler implements ISObjectBeforeInsert{
+public with sharing class DemoAccountTriggerActionHandler implements ISObjectBeforeInsert {
     public DemoAccountTriggerActionHandler() {
 
     }
