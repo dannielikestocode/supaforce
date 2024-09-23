@@ -6,7 +6,6 @@ public with sharing class TriggerActionDispatcher {
     private static final String AFTER_UPDATE_INTERFACE = 'ISObjectAfterUpdate';
     private static final String AFTER_DELETE_INTERFACE = 'ISObjectAfterDelete';
     private static final String AFTER_UNDELETE_INTERFACE = 'ISObjectAfterUndelete';
-
     private static final List<String> TRIGGER_CONTEXT_INTERFACES = new List<String>{
         BEFORE_INSERT_INTERFACE,
         BEFORE_UPDATE_INTERFACE,
@@ -72,7 +71,7 @@ public with sharing class TriggerActionDispatcher {
                                 FROM Trigger_Action_Configuration__c
                                 WHERE Is_Active__c = true
                                     AND Class_Name__c != null
-                                ORDER BY Priority__c ASC NULLS FIRST];
+                                ORDER BY Priority__c ASC NULLS LAST];
     }
 
     private static void setApexClasses() {
@@ -98,7 +97,7 @@ public with sharing class TriggerActionDispatcher {
             }
 
             ApexTypeImplementor apexClass = apexClassMap.get(action.Class_Name__c);
-            if (apexClass.InterfaceName != targetContextInterface) {
+            if (apexClass?.InterfaceName != targetContextInterface) {
                 continue;
             }
 
