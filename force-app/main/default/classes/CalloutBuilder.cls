@@ -84,6 +84,7 @@ public without sharing class CalloutBuilder {
             this.urlParams = new Map<String, String>();
         }
         this.urlParams.put(key, value);
+        return this;
     }
 
     public CalloutBuilder setHeader(String key, String value) {
@@ -141,6 +142,6 @@ public without sharing class CalloutBuilder {
             }
             parameterCount--;
         }
-        return String.isNotBlank(this.urlEncodingScheme) ? EncodingUtil(String.join(params, ''), this.urlEncodingScheme) : String.join(params, '');
+        return String.isNotBlank(this.urlEncodingScheme) ? EncodingUtil.urlEncode(String.join(params, ''), this.urlEncodingScheme) : String.join(params, '');
     }
 }
