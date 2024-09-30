@@ -1,8 +1,12 @@
 public without sharing class CalloutBuilder {
     private static final String DEFAULT_EXCEPTION_MESSAGE = 'Callout failed';
+
     private HttpRequest request {get;set;}
     private String successHttpStatus {get;set;}
     private Integer successHttpStatusCode {get;set;}
+    private String endpoint {get;set;}
+    private String urlEncodingScheme {get;set;}
+    private Map<String, String> urlParams {get;set;}
 
     public CalloutBuilder() {
         this.request = new HttpRequest();
@@ -16,7 +20,7 @@ public without sharing class CalloutBuilder {
         return this.request.getBodyAsBlob();
     }
 
-    public Dom.Document getBodyDoccument() {
+    public Dom.Document getBodyDocument() {
         return this.request.getBodyDocument();
     }
 
@@ -25,7 +29,11 @@ public without sharing class CalloutBuilder {
     }
 
     public String getEndpoint() {
-        return this.request.getEndpoint();
+        return this.endpoint;
+    }
+
+    public String getUrlEncodingScheme() {
+        return this.urlEncodingScheme;
     }
 
     public String getHeader(String key) {
@@ -34,35 +42,6 @@ public without sharing class CalloutBuilder {
 
     public String getMethod() {
         return this.request.getMethod();
-    }
-
-    public HttpMethod getHttpMethod() {
-        String method = this.request.getMethod();
-        HttpMethod methodEnum;
-        switch on method {
-            when 'POST' {
-                methodEnum = HttpMethod.POST;
-            }
-            when 'GET' {
-                methodEnum = HttpMethod.GET;
-            }
-            when 'PUT' {
-                methodEnum = HttpMethod.PUT;
-            }
-            when 'PATCH' {
-                methodEnum = HttpMethod.PATCH;
-            }
-            when 'DELETE' {
-                methodEnum = HttpMethod.DEL;
-            }
-            when 'HEAD' {
-                methodEnum = HttpMethod.HEAD;
-            }
-            when 'TRACE' {
-                methodEnum = HttpMethod.TRACE;
-            }
-        }
-        return methodEnum;
     }
 
     public CalloutBuilder setBody(String body) {
@@ -91,8 +70,20 @@ public without sharing class CalloutBuilder {
     }
 
     public CalloutBuilder setEndpoint(String endpoint) {
-        this.request.setEndpoint(endpoint);
+        this.endpoint = endpoint;
         return this;
+    }
+
+    public CalloutBuilder setUrlEncodingScheme(String urlEncodingScheme) {
+        this.urlEncodingScheme = urlEncodingScheme;
+        return this;
+    }
+
+    public CalloutBuilder setUrlParam(String key, String value) {
+        if (this.urlParams == null) {
+            this.urlParams = new Map<String, String>();
+        }
+        this.urlParams.put(key, value);
     }
 
     public CalloutBuilder setHeader(String key, String value) {
@@ -100,18 +91,7 @@ public without sharing class CalloutBuilder {
         return this;
     }
 
-    public CalloutBuilder setHeaders(Map<String, String> headers) {
-        for (String key: headers.keySet()) {
-            this.request.setHeader(key, headers.get(key));
-        }
-        return this;
-    }
-
-    public CalloutBuilder setMethod(HttpMethod methodEnum) {
-        String method = methodEnum.name();
-        if (methodEnum == HttpMethod.DEL) {
-            method = 'DELETE';
-        }
+    public CalloutBuilder setMethod(String method) {
         this.request.setMethod(method);
         return this;
     }
@@ -132,6 +112,7 @@ public without sharing class CalloutBuilder {
     }
 
     public HttpResponse send() {
+        this.request.setEndpoint(buildEndpoint());
         Http httpSender = new Http();
         HttpResponse response = httpSender.send(this.request);
         if ((this.successHttpStatus != null && this.successHttpStatus != response.getStatus()) || 
@@ -141,5 +122,25 @@ public without sharing class CalloutBuilder {
         return response;
     }
 
-    public enum HttpMethod { POST, GET, PUT, PATCH, DEL, HEAD, TRACE }
+    private String buildEndpoint() {
+        if (this.urlParams == null || this.urlParams.isEmpty()) {
+            return '';
+        }
+
+        List<String> params = new List<String>{this.endpoint, '?'};
+        Integer parameterCount = this.urlParams.size();
+        for (String key: this.urlParams.keySet()) {
+            params.add(key);
+            params.add('=');
+            params.add(this.urlParams.get(key));
+
+            if ((parameterCount - 1) > 0) {
+                // A value of 0 indicates the end of the param list,
+                // meaning we shouldn't add anymore param separators
+                params.add('&');
+            }
+            parameterCount--;
+        }
+        return String.isNotBlank(this.urlEncodingScheme) ? EncodingUtil(String.join(params, ''), this.urlEncodingScheme) : String.join(params, '');
+    }
 }
