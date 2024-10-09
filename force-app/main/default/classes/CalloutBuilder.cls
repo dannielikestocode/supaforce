@@ -125,7 +125,7 @@ public without sharing class CalloutBuilder {
 
     private String buildEndpoint() {
         if (this.urlParams == null || this.urlParams.isEmpty()) {
-            return '';
+            return this.endpoint;
         }
 
         List<String> params = new List<String>{this.endpoint, '?'};
@@ -137,7 +137,7 @@ public without sharing class CalloutBuilder {
 
             if ((parameterCount - 1) > 0) {
                 // A value of 0 indicates the end of the param list,
-                // meaning we shouldn't add anymore param separators
+                // meaning additional param separators are not required
                 params.add('&');
             }
             parameterCount--;
