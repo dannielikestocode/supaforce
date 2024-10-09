@@ -21,7 +21,7 @@ public without sharing class StringBuilder {
         return this;
     }
 
-    public String toString() {
+    public override String toString() {
         return String.join(this.STRING_VALUES, this.DEFAULT_JOIN_VALUE);
     }
 
